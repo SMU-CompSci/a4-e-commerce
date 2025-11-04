@@ -1,4 +1,4 @@
-# A4 — Product Management with Red-Black Tree (CS 2341, Fall 2025)
+# A4 — E-commerce (CS 2341, Fall 2025)
 
 **Points:** Part 1 (30) + Part 2 (50) + Part 3 (20) = **100**  
 **Due:** TBD (Check course schedule)  
