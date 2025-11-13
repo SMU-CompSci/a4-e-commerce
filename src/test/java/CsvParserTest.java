@@ -235,26 +235,26 @@ class CsvParserTest {
 
     @Test
     void parseProductId_simpleId_success() {
-        String result = CsvParser.parseProductId("P001");
-        assertEquals("P001", result);
+        int result = CsvParser.parseProductId("001");
+        assertEquals(1, result);
     }
 
     @Test
     void parseProductId_withWhitespace_trimmed() {
-        String result = CsvParser.parseProductId("  P001  ");
-        assertEquals("P001", result);
+        int result = CsvParser.parseProductId("  001  ");
+        assertEquals(1, result);
     }
 
     @Test
     void parseProductId_quoted_removesQuotes() {
-        String result = CsvParser.parseProductId("\"P001\"");
-        assertEquals("P001", result);
+        int result = CsvParser.parseProductId("\"P001\"");
+        assertEquals(1, result);
     }
 
     @Test
     void parseProductId_alphanumeric_success() {
-        String result = CsvParser.parseProductId("ABC123XYZ");
-        assertEquals("ABC123XYZ", result);
+        int result = CsvParser.parseProductId("ABC123XYZ");
+        assertEquals(123, result);
     }
 
     @Test

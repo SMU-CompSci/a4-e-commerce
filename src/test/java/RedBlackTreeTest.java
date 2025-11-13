@@ -3,6 +3,7 @@ import com.student_work.RedBlackTree;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterEach;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -10,9 +11,15 @@ import java.io.PrintStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Comprehensive unit tests for Red-Black Tree implementation.
- * Tests all functions including insertion, search, validation, rotations,
- * and family relationship functions.
+ * Enhanced comprehensive unit tests for Left-Leaning Red-Black Tree (LLRB) implementation.
+ * Tests insertion, search, and validation functions for e-commerce product management.
+ *
+ * LLRB Properties Tested:
+ * - All red links lean left (no right-leaning red links)
+ * - No node has two red children
+ * - Perfect black balance (all paths have same number of black nodes)
+ * - Root is always black
+ * - Corresponds to 2-3 tree representation
  */
 class RedBlackTreeTest {
 
@@ -33,26 +40,228 @@ class RedBlackTreeTest {
         System.setErr(new PrintStream(outputStream));
     }
 
+    @AfterEach
+    void tearDown() {
+        // Restore original streams
+        System.setOut(originalOut);
+        System.setErr(originalErr);
+    }
+
+    // ==================== HELPER METHODS FOR DIAGNOSTICS ====================
+
+    /**
+     * Enhanced assertion for tree validation with detailed diagnostics
+     */
+    private void assertTreeValid(RedBlackTree tree, String context) {
+        boolean isValid = tree.validate();
+        if (!isValid) {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+
+            System.err.println("\n" + "=".repeat(70));
+            System.err.println("❌ LLRB VALIDATION FAILED: " + context);
+            System.err.println("=".repeat(70));
+
+            // Print validation errors that were captured
+            String capturedOutput = outputStream.toString();
+            if (!capturedOutput.isEmpty()) {
+                System.err.println("\nValidation Errors:");
+                System.err.println(capturedOutput);
+            }
+
+            System.err.println("\nTree State:");
+            tree.printTree();
+
+            System.err.println("\nDiagnostic Information:");
+            System.err.println("  Size: " + tree.size());
+            System.err.println("  Height: " + tree.height());
+            System.err.println("  Red Links: " + tree.countRedLinks());
+
+            System.err.println("\n💡 DEBUGGING HINTS:");
+            if (capturedOutput.contains("Right-leaning red link")) {
+                System.err.println("  → Issue: Right-leaning red link detected");
+                System.err.println("  → Cause: rotateLeft() may not be called when right child is red");
+                System.err.println("  → Fix: Check that after inserting to the right, you call:");
+                System.err.println("         if (isRed(h.right) && !isRed(h.left)) h = rotateLeft(h);");
+            }
+            if (capturedOutput.contains("Two consecutive red links")) {
+                System.err.println("  → Issue: Two consecutive red nodes found");
+                System.err.println("  → Cause: Parent and child both red (red-red violation)");
+                System.err.println("  → Fix: Check that you rotate right when left child and left-left");
+                System.err.println("         grandchild are both red, or flip colors when both children are red");
+            }
+            if (capturedOutput.contains("Black balance violated")) {
+                System.err.println("  → Issue: Unequal black heights on different paths");
+                System.err.println("  → Cause: Rotations or color flips not preserving black height");
+                System.err.println("  → Fix: Verify that rotations preserve the color properly and");
+                System.err.println("         flipColors is called when both children are red");
+            }
+            if (capturedOutput.contains("Root is not black")) {
+                System.err.println("  → Issue: Root node is red instead of black");
+                System.err.println("  → Cause: Missing root.color = BLACK after insertion");
+                System.err.println("  → Fix: Ensure root.color = BLACK is set after insert() returns");
+            }
+            System.err.println("=".repeat(70) + "\n");
+        }
+        assertTrue(isValid, context + " - Tree should be valid LLRB (see diagnostics above)");
+    }
+
+    /**
+     * Enhanced assertion for 2-3 tree property with diagnostics
+     */
+    private void assert23TreeValid(RedBlackTree tree, String context) {
+        boolean is23 = tree.is23();
+        if (!is23) {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+
+            System.err.println("\n" + "=".repeat(70));
+            System.err.println("❌ 2-3 TREE PROPERTY VIOLATED: " + context);
+            System.err.println("=".repeat(70));
+
+            System.err.println("\nTree State:");
+            tree.printTree();
+
+            System.err.println("\n💡 DEBUGGING HINTS:");
+            System.err.println("  → Issue: Tree does not correspond to a valid 2-3 tree");
+            System.err.println("  → Common causes:");
+            System.err.println("    1. Right-leaning red links (should lean left)");
+            System.err.println("    2. Consecutive red nodes (red parent with red child)");
+            System.err.println("  → Fix: Review the three fix-up operations after recursive insert:");
+            System.err.println("    1. Rotate left if right is red and left is black");
+            System.err.println("    2. Rotate right if left and left.left are both red");
+            System.err.println("    3. Flip colors if both children are red");
+            System.err.println("=".repeat(70) + "\n");
+        }
+        assertTrue(is23, context + " - Tree should maintain 2-3 tree property (see diagnostics above)");
+    }
+
+    /**
+     * Enhanced size assertion with actual vs expected
+     */
+    private void assertSizeEquals(int expected, RedBlackTree tree, String context) {
+        int actual = tree.size();
+        if (actual != expected) {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+
+            System.err.println("\n❌ SIZE MISMATCH: " + context);
+            System.err.println("  Expected: " + expected);
+            System.err.println("  Actual:   " + actual);
+            System.err.println("  Difference: " + (actual - expected));
+
+            if (actual < expected) {
+                System.err.println("\n💡 HINT: Size is smaller than expected");
+                System.err.println("  → Possible causes:");
+                System.err.println("    1. Size not incremented during insert");
+                System.err.println("    2. Duplicate insertions not handled (size++ called even for updates)");
+            } else {
+                System.err.println("\n💡 HINT: Size is larger than expected");
+                System.err.println("  → Possible cause: Size incremented even for duplicate insertions");
+                System.err.println("  → Fix: Only increment size for new insertions, not updates");
+            }
+        }
+        assertEquals(expected, actual, context);
+    }
+
+    /**
+     * Enhanced height assertion with bounds checking
+     */
+    private void assertHeightInBounds(RedBlackTree tree, int maxExpected, String context) {
+        int actual = tree.height();
+        if (actual > maxExpected) {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+
+            System.err.println("\n❌ HEIGHT EXCEEDS BOUNDS: " + context);
+            System.err.println("  Expected: <= " + maxExpected);
+            System.err.println("  Actual:   " + actual);
+            System.err.println("  Excess:   " + (actual - maxExpected));
+
+            System.err.println("\n💡 HINT: Tree is deeper than logarithmic bound");
+            System.err.println("  → Possible causes:");
+            System.err.println("    1. Rotations not being performed correctly");
+            System.err.println("    2. Tree becoming unbalanced (check validation)");
+            System.err.println("    3. Color flips not working properly");
+            System.err.println("  → Expected LLRB height: h <= 2*log₂(n+1)");
+            System.err.println("  → For comparison, a perfectly balanced tree would have height: " +
+                    (int)Math.ceil(Math.log(tree.size() + 1) / Math.log(2)));
+        }
+        assertTrue(actual <= maxExpected,
+                String.format("%s - Height %d should be <= %d", context, actual, maxExpected));
+    }
+
+    /**
+     * Enhanced search assertion with detailed output
+     */
+    private void assertProductFound(int productId, RedBlackTree tree, String context) {
+        Product found = tree.search(productId);
+        if (found == null) {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+
+            System.err.println("\n❌ PRODUCT NOT FOUND: " + context);
+            System.err.println("  Looking for: " + productId);
+            System.err.println("  Result: null");
+
+            System.err.println("\nTree State:");
+            tree.printTree();
+
+            System.err.println("\n💡 HINT: Product not found in tree");
+            System.err.println("  → Possible causes:");
+            System.err.println("    1. Product was never inserted");
+            System.err.println("    2. BST search logic has a bug (check comparisons)");
+            System.err.println("    3. Tree structure was corrupted during rotations");
+            System.err.println("  → Check: Does the product ID exist in the tree above?");
+        }
+        assertNotNull(found, context + " - Should find product " + productId);
+    }
+
+    /**
+     * Enhanced search assertion for null (product should NOT be found)
+     */
+    private void assertProductNotFound(int productId, RedBlackTree tree, String context) {
+        Product found = tree.search(productId);
+        if (found != null) {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+
+            System.err.println("\n❌ UNEXPECTED PRODUCT FOUND: " + context);
+            System.err.println("  Looking for: " + productId);
+            System.err.println("  Expected: null");
+            System.err.println("  Found: " + found.getId() + " - " + found.getName());
+
+            System.err.println("\n💡 HINT: Found a product that shouldn't exist");
+            System.err.println("  → This product was likely inserted but shouldn't have been");
+            System.err.println("  → Or test expectations are incorrect");
+        }
+        assertNull(found, context + " - Should NOT find product " + productId);
+    }
+
     // ==================== CONSTRUCTOR TESTS ====================
 
     @Test
     @DisplayName("Constructor creates empty tree")
     void testConstructor_emptyTree() {
         RedBlackTree newTree = new RedBlackTree();
-        assertEquals(0, newTree.size(), "New tree should have size 0");
+
+        assertSizeEquals(0, newTree, "New tree should have size 0");
         assertTrue(newTree.isEmpty(), "New tree should be empty");
-        assertEquals(0, newTree.height(), "Empty tree should have height 0");
+
+        int actualHeight = newTree.height();
+        if (actualHeight != 0) {
+            System.setOut(originalOut);
+            System.err.println("❌ Empty tree height mismatch - Expected: 0, Actual: " + actualHeight);
+        }
+        assertEquals(0, actualHeight, "Empty tree should have height 0");
     }
 
     @Test
-    @DisplayName("Constructor creates valid tree")
+    @DisplayName("Constructor creates valid LLRB tree")
     void testConstructor_validTree() {
         RedBlackTree newTree = new RedBlackTree();
-        assertTrue(newTree.validate(), "New tree should be valid");
-        assertTrue(newTree.validateRootAndLeaves(), "New tree should pass root validation");
-        assertTrue(newTree.validateNodeColors(), "New tree should pass color validation");
-        assertTrue(newTree.validateRedNodeChildren(), "New tree should pass red-node validation");
-        assertTrue(newTree.validateBlackHeight(), "New tree should pass black-height validation");
+        assertTreeValid(newTree, "New empty tree");
+        assert23TreeValid(newTree, "New empty tree");
     }
 
     // ==================== SIZE AND EMPTY TESTS ====================
@@ -60,35 +269,38 @@ class RedBlackTreeTest {
     @Test
     @DisplayName("Size increases with insertions")
     void testSize_increasesWithInsertions() {
-        assertEquals(0, tree.size(), "Initial size should be 0");
+        assertSizeEquals(0, tree, "Initial tree");
 
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        assertEquals(1, tree.size(), "Size should be 1 after first insert");
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
+        assertSizeEquals(1, tree, "After first insert");
 
-        tree.insert(new Product("P002", "Product2", "Cat2", 20.0));
-        assertEquals(2, tree.size(), "Size should be 2 after second insert");
+        tree.insert(new Product(2, "Product2", "Cat2", 20.0));
+        assertSizeEquals(2, tree, "After second insert");
 
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-        assertEquals(3, tree.size(), "Size should be 3 after third insert");
-    }
-
-    @Test
-    @DisplayName("Size doesn't increase on duplicate insertion")
-    void testSize_duplicateInsertion() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        assertEquals(1, tree.size(), "Size should be 1");
-
-        tree.insert(new Product("P001", "Product1Updated", "Cat1", 15.0));
-        assertEquals(1, tree.size(), "Size should still be 1 after duplicate");
+        tree.insert(new Product(3, "Product3", "Cat3", 30.0));
+        assertSizeEquals(3, tree, "After third insert");
     }
 
     @Test
     @DisplayName("isEmpty returns correct values")
     void testIsEmpty() {
-        assertTrue(tree.isEmpty(), "New tree should be empty");
+        boolean initialEmpty = tree.isEmpty();
+        if (!initialEmpty) {
+            System.setOut(originalOut);
+            System.err.println("❌ New tree should be empty but isEmpty() returned false");
+            System.err.println("  → Check: Is size initialized to 0 in constructor?");
+        }
+        assertTrue(initialEmpty, "New tree should be empty");
 
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        assertFalse(tree.isEmpty(), "Tree with 1 element should not be empty");
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
+        boolean afterInsert = tree.isEmpty();
+        if (afterInsert) {
+            System.setOut(originalOut);
+            System.err.println("❌ Tree with 1 element reports as empty");
+            System.err.println("  → Check: Is size being incremented on insert?");
+            System.err.println("  → Actual size: " + tree.size());
+        }
+        assertFalse(afterInsert, "Tree with 1 element should not be empty");
     }
 
     // ==================== HEIGHT TESTS ====================
@@ -96,146 +308,179 @@ class RedBlackTreeTest {
     @Test
     @DisplayName("Height of empty tree is 0")
     void testHeight_emptyTree() {
-        assertEquals(0, tree.height(), "Empty tree should have height 0");
+        int actual = tree.height();
+        if (actual != 0) {
+            System.setOut(originalOut);
+            System.err.println("❌ Empty tree height - Expected: 0, Actual: " + actual);
+            System.err.println("  → Check: Does height() handle null root correctly?");
+        }
+        assertEquals(0, actual, "Empty tree should have height 0");
     }
 
     @Test
     @DisplayName("Height of single node tree is 1")
     void testHeight_singleNode() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        assertEquals(1, tree.height(), "Single node tree should have height 1");
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
+        int actual = tree.height();
+        if (actual != 1) {
+            System.setOut(originalOut);
+            System.err.println("❌ Single node height - Expected: 1, Actual: " + actual);
+            System.err.println("  → Check: Is height counting nodes or edges?");
+            System.err.println("  → Should return 1 for single node (not 0)");
+        }
+        assertEquals(1, actual, "Single node tree should have height 1");
     }
 
     @Test
     @DisplayName("Height increases as tree grows")
     void testHeight_growingTree() {
-        tree.insert(new Product("P005", "Product5", "Cat5", 50.0));
+        tree.insert(new Product(5, "Product5", "Cat5", 50.0));
         int height1 = tree.height();
 
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-        tree.insert(new Product("P007", "Product7", "Cat7", 70.0));
+        tree.insert(new Product(3, "Product3", "Cat3", 30.0));
+        tree.insert(new Product(7, "Product7", "Cat7", 70.0));
         int height2 = tree.height();
 
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        tree.insert(new Product("P004", "Product4", "Cat4", 40.0));
-        tree.insert(new Product("P006", "Product6", "Cat6", 60.0));
-        tree.insert(new Product("P009", "Product9", "Cat9", 90.0));
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
+        tree.insert(new Product(4, "Product4", "Cat4", 40.0));
+        tree.insert(new Product(6, "Product6", "Cat6", 60.0));
+        tree.insert(new Product(9, "Product9", "Cat9", 90.0));
         int height3 = tree.height();
 
-        assertTrue(height2 >= height1, "Height should not decrease");
-        assertTrue(height3 >= height2, "Height should not decrease");
+        if (height2 < height1) {
+            System.setOut(originalOut);
+            System.err.println("❌ Height decreased: " + height1 + " → " + height2);
+            System.err.println("  → This should never happen!");
+        }
+        assertTrue(height2 >= height1,
+                String.format("Height should not decrease: %d → %d", height1, height2));
+
+        if (height3 < height2) {
+            System.setOut(originalOut);
+            System.err.println("❌ Height decreased: " + height2 + " → " + height3);
+        }
+        assertTrue(height3 >= height2,
+                String.format("Height should not decrease: %d → %d", height2, height3));
     }
 
     @Test
-    @DisplayName("Height respects log(n) bound")
+    @DisplayName("Height respects LLRB logarithmic bound: h <= 2*log2(n+1)")
     void testHeight_logarithmicBound() {
         // Insert 15 nodes
         for (int i = 1; i <= 15; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
         }
 
         int height = tree.height();
-        // For Red-Black tree: height <= 2 * log2(n+1)
-        // For n=15: height <= 2 * log2(16) = 2 * 4 = 8
-        assertTrue(height <= 8, "Height should be <= 8 for 15 nodes");
+        int maxHeight = (int) (2 * Math.log(16) / Math.log(2));
+
+        assertHeightInBounds(tree, maxHeight, "15 node tree");
     }
 
     // ==================== INSERT TESTS ====================
 
     @Test
-    @DisplayName("Insert into empty tree - Case 1")
-    void testInsert_emptyTree_case1() {
-        Product p = new Product("P005", "Product5", "Cat5", 50.0);
+    @DisplayName("Insert into empty tree creates valid LLRB")
+    void testInsert_emptyTree() {
+        Product p = new Product(5, "Product5", "Cat5", 50.0);
         tree.insert(p);
 
-        assertEquals(1, tree.size(), "Size should be 1");
-        assertTrue(tree.validate(), "Tree should be valid after first insert");
-        assertTrue(tree.validateRootAndLeaves(), "Root should be black");
+        assertSizeEquals(1, tree, "After first insert");
+        assertTreeValid(tree, "After first insert");
+        assert23TreeValid(tree, "After first insert");
     }
 
     @Test
-    @DisplayName("Insert creates balanced tree")
+    @DisplayName("Insert maintains LLRB balance")
     void testInsert_maintainsBalance() {
-        String[] ids = {"P005", "P003", "P007", "P001", "P004", "P006", "P009"};
+        int[] ids = {5, 3, 7, 1, 4, 6, 9};
 
-        for (String id : ids) {
+        for (int i = 0; i < ids.length; i++) {
+            int id = ids[i];
             tree.insert(new Product(id, "Product", "Cat", 10.0));
-            assertTrue(tree.validate(), "Tree should be valid after inserting " + id);
+            assertTreeValid(tree, "After inserting " + id + " (" + (i+1) + " of " + ids.length + ")");
+            assert23TreeValid(tree, "After inserting " + id);
         }
 
-        assertEquals(7, tree.size(), "Size should be 7");
+        assertSizeEquals(7, tree, "After all insertions");
     }
 
     @Test
-    @DisplayName("Insert handles duplicates by updating")
-    void testInsert_duplicateUpdates() {
-        tree.insert(new Product("P001", "OriginalName", "Cat1", 10.0));
-        Product found1 = tree.search("P001");
-        assertEquals("OriginalName", found1.getName(), "Should find original name");
-
-        tree.insert(new Product("P001", "UpdatedName", "Cat2", 15.0));
-        Product found2 = tree.search("P001");
-        assertEquals("UpdatedName", found2.getName(), "Should find updated name");
-        assertEquals(15.0, found2.getPrice(), 0.01, "Should find updated price");
-        assertEquals(1, tree.size(), "Size should still be 1");
-    }
-
-    @Test
-    @DisplayName("Insert sequential ascending order")
+    @DisplayName("Insert sequential ascending order maintains LLRB properties")
     void testInsert_sequentialAscending() {
         for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
+            assertTreeValid(tree, "Sequential ascending insert #" + i);
         }
 
-        assertEquals(10, tree.size(), "Size should be 10");
-        assertTrue(tree.validate(), "Tree should remain balanced with ascending inserts");
+        assertSizeEquals(10, tree, "After 10 sequential ascending insertions");
+        assert23TreeValid(tree, "Sequential ascending final tree");
     }
 
     @Test
-    @DisplayName("Insert sequential descending order")
+    @DisplayName("Insert sequential descending order maintains LLRB properties")
     void testInsert_sequentialDescending() {
         for (int i = 10; i >= 1; i--) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
+            assertTreeValid(tree, "Sequential descending insert #" + (11 - i));
         }
 
-        assertEquals(10, tree.size(), "Size should be 10");
-        assertTrue(tree.validate(), "Tree should remain balanced with descending inserts");
+        assertSizeEquals(10, tree, "After 10 sequential descending insertions");
+        assert23TreeValid(tree, "Sequential descending final tree");
     }
 
     @Test
-    @DisplayName("Insert random order maintains properties")
+    @DisplayName("Insert random order maintains LLRB properties")
     void testInsert_randomOrder() {
-        String[] ids = {"P008", "P003", "P010", "P001", "P006", "P004", "P007", "P002", "P009", "P005"};
+        int[] randomIds = {8, 3, 10, 1, 6, 9, 2, 7, 4, 5};
 
-        for (String id : ids) {
-            tree.insert(new Product(id, "Product", "Cat", 10.0));
-            assertTrue(tree.validate(), "Tree should be valid after each insert");
+        for (int i = 0; i < randomIds.length; i++) {
+            tree.insert(new Product(randomIds[i], "Product", "Cat", 10.0));
+            assertTreeValid(tree, "Random insert #" + (i+1) + " (" + randomIds[i] + ")");
         }
 
-        assertEquals(10, tree.size(), "Size should be 10");
+        assertSizeEquals(10, tree, "After 10 random insertions");
+        assert23TreeValid(tree, "Random order final tree");
     }
 
     @Test
-    @DisplayName("Insert large number of nodes")
-    void testInsert_largeScale() {
-        int numNodes = 100;
+    @DisplayName("Update existing product maintains LLRB properties")
+    void testInsert_updateExisting() {
+        Product original = new Product(1, "Original", "Cat1", 10.0);
+        tree.insert(original);
+        assertSizeEquals(1, tree, "After initial insert");
 
-        for (int i = 1; i <= numNodes; i++) {
-            String id = String.format("P%04d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+        Product updated = new Product(1, "Updated", "Cat2", 20.0);
+        tree.insert(updated);
+
+        int actualSize = tree.size();
+        if (actualSize != 1) {
+            System.setOut(originalOut);
+            System.err.println("\n❌ SIZE ERROR ON UPDATE:");
+            System.err.println("  Expected: 1 (size should NOT increase on update)");
+            System.err.println("  Actual: " + actualSize);
+            System.err.println("\n💡 HINT: When updating an existing product:");
+            System.err.println("  → Do NOT increment size");
+            System.err.println("  → Only increment size for NEW insertions");
+            System.err.println("  → Check your insert() method's duplicate handling");
         }
+        assertSizeEquals(1, tree, "After update (size should NOT increase)");
 
-        assertEquals(numNodes, tree.size(), "Size should be " + numNodes);
-        assertTrue(tree.validate(), "Tree should be valid with 100 nodes");
+        Product found = tree.search(1);
+        assertProductFound(1, tree, "Updated product");
 
-        // Verify height is logarithmic
-        int height = tree.height();
-        int maxHeight = (int) (2 * Math.log(numNodes + 1) / Math.log(2)) + 1;
-        assertTrue(height <= maxHeight,
-                String.format("Height %d should be <= %d for %d nodes", height, maxHeight, numNodes));
+        String actualName = found.getName();
+        if (!actualName.equals("Updated")) {
+            System.setOut(originalOut);
+            System.err.println("\n❌ PRODUCT NOT UPDATED:");
+            System.err.println("  Expected name: 'Updated'");
+            System.err.println("  Actual name: '" + actualName + "'");
+            System.err.println("\n💡 HINT: Product data not being updated");
+            System.err.println("  → Check: h.product = product in duplicate case");
+        }
+        assertEquals("Updated", actualName, "Product name should be updated");
+
+        assertTreeValid(tree, "After product update");
     }
 
     // ==================== SEARCH TESTS ====================
@@ -243,582 +488,337 @@ class RedBlackTreeTest {
     @Test
     @DisplayName("Search in empty tree returns null")
     void testSearch_emptyTree() {
-        Product result = tree.search("P001");
-        assertNull(result, "Search in empty tree should return null");
+        assertProductNotFound(1, tree, "Search in empty tree");
     }
 
     @Test
-    @DisplayName("Search finds single node")
-    void testSearch_singleNode() {
-        Product p = new Product("P001", "TestProduct", "TestCat", 99.99);
+    @DisplayName("Search finds single inserted product")
+    void testSearch_singleProduct() {
+        Product p = new Product(5, "Product5", "Cat5", 50.0);
         tree.insert(p);
 
-        Product found = tree.search("P001");
-        assertNotNull(found, "Should find the product");
-        assertEquals("P001", found.getId(), "Should find correct ID");
-        assertEquals("TestProduct", found.getName(), "Should find correct name");
-        assertEquals(99.99, found.getPrice(), 0.01, "Should find correct price");
+        assertProductFound(5, tree, "After inserting 5");
+        assertProductNotFound(1, tree, "Non-existent product 1");
     }
 
     @Test
-    @DisplayName("Search finds all inserted nodes")
-    void testSearch_multipleNodes() {
-        String[] ids = {"P005", "P003", "P007", "P001", "P009"};
+    @DisplayName("Search finds all inserted products")
+    void testSearch_multipleProducts() {
+        int[] ids = {5, 3, 7, 1, 9};
 
-        for (String id : ids) {
-            tree.insert(new Product(id, "Product" + id, "Cat", 10.0));
+        for (int id : ids) {
+            tree.insert(new Product(id, "Product", "Cat", 10.0));
         }
 
-        for (String id : ids) {
-            Product found = tree.search(id);
-            assertNotNull(found, "Should find product " + id);
-            assertEquals(id, found.getId(), "Should find correct product ID");
+        for (int id : ids) {
+            assertProductFound(id, tree, "Product " + id);
         }
+
+        assertProductNotFound(999, tree, "Non-existent product 999");
     }
 
     @Test
-    @DisplayName("Search returns null for non-existent node")
-    void testSearch_nonExistent() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-        tree.insert(new Product("P005", "Product5", "Cat5", 50.0));
+    @DisplayName("Search handles ID variations correctly")
+    void testSearch_idVariations() {
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
 
-        Product result = tree.search("P002");
-        assertNull(result, "Should return null for non-existent product");
-
-        result = tree.search("P000");
-        assertNull(result, "Should return null for ID less than all nodes");
-
-        result = tree.search("P999");
-        assertNull(result, "Should return null for ID greater than all nodes");
+        assertProductFound(1, tree, "Exact match");
+        assertProductNotFound(10, tree, "Different ID (should not match)");
+        assertProductNotFound(100, tree, "Different ID format");
     }
 
     @Test
-    @DisplayName("Search after updates finds new values")
-    void testSearch_afterUpdate() {
-        tree.insert(new Product("P001", "OriginalName", "Cat1", 10.0));
-        tree.insert(new Product("P001", "UpdatedName", "Cat2", 20.0));
+    @DisplayName("Search after many insertions")
+    void testSearch_afterManyInsertions() {
+        for (int i = 1; i <= 100; i++) {
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
+        }
 
-        Product found = tree.search("P001");
-        assertEquals("UpdatedName", found.getName(), "Should find updated name");
-        assertEquals(20.0, found.getPrice(), 0.01, "Should find updated price");
+        // Test specific searches
+        assertProductFound(1, tree, "First product");
+        assertProductFound(50, tree, "Middle product");
+        assertProductFound(100, tree, "Last product");
+        assertProductNotFound(0, tree, "Before range");
+        assertProductNotFound(101, tree, "After range");
     }
 
     // ==================== VALIDATION TESTS ====================
 
     @Test
-    @DisplayName("Validate returns true for empty tree")
+    @DisplayName("Empty tree is valid LLRB")
     void testValidate_emptyTree() {
-        assertTrue(tree.validate(), "Empty tree should be valid");
+        assertTreeValid(tree, "Empty tree");
+        assert23TreeValid(tree, "Empty tree");
     }
 
     @Test
-    @DisplayName("Validate returns true after single insert")
-    void testValidate_singleNode() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        assertTrue(tree.validate(), "Tree with single node should be valid");
-    }
-
-    @Test
-    @DisplayName("Validate returns true for balanced tree")
-    void testValidate_balancedTree() {
-        String[] ids = {"P005", "P003", "P007", "P001", "P004", "P006", "P009"};
-
-        for (String id : ids) {
-            tree.insert(new Product(id, "Product", "Cat", 10.0));
-        }
-
-        assertTrue(tree.validate(), "Balanced tree should be valid");
-    }
-
-    @Test
-    @DisplayName("Validate checks all properties")
-    void testValidate_checksAllProperties() {
+    @DisplayName("Validation passes after each insertion")
+    void testValidate_afterEachInsertion() {
         for (int i = 1; i <= 20; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
 
-            boolean valid = tree.validate();
-            assertTrue(valid, "Tree should be valid after inserting " + i + " nodes");
-
-            if (valid) {
-                assertTrue(tree.validateRootAndLeaves(), "Root/leaves should be valid");
-                assertTrue(tree.validateNodeColors(), "Node colors should be valid");
-                assertTrue(tree.validateRedNodeChildren(), "Red node children should be valid");
-                assertTrue(tree.validateBlackHeight(), "Black heights should be valid");
-            }
-        }
-    }
-
-    // ==================== VALIDATE ROOT AND LEAVES TESTS ====================
-
-    @Test
-    @DisplayName("ValidateRootAndLeaves passes for empty tree")
-    void testValidateRootAndLeaves_emptyTree() {
-        assertTrue(tree.validateRootAndLeaves(), "Empty tree should pass root validation");
-    }
-
-    @Test
-    @DisplayName("ValidateRootAndLeaves passes after insertions")
-    void testValidateRootAndLeaves_afterInsertions() {
-        for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-            assertTrue(tree.validateRootAndLeaves(),
-                    "Root should be black after inserting " + i + " nodes");
-        }
-    }
-
-    // ==================== VALIDATE NODE COLORS TESTS ====================
-
-    @Test
-    @DisplayName("ValidateNodeColors passes for empty tree")
-    void testValidateNodeColors_emptyTree() {
-        assertTrue(tree.validateNodeColors(), "Empty tree should pass color validation");
-    }
-
-    @Test
-    @DisplayName("ValidateNodeColors passes after insertions")
-    void testValidateNodeColors_afterInsertions() {
-        for (int i = 1; i <= 15; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-            assertTrue(tree.validateNodeColors(),
-                    "All nodes should have valid colors after inserting " + i + " nodes");
-        }
-    }
-
-    // ==================== VALIDATE RED NODE CHILDREN TESTS ====================
-
-    @Test
-    @DisplayName("ValidateRedNodeChildren passes for empty tree")
-    void testValidateRedNodeChildren_emptyTree() {
-        assertTrue(tree.validateRedNodeChildren(),
-                "Empty tree should pass red-node validation");
-    }
-
-    @Test
-    @DisplayName("ValidateRedNodeChildren passes after insertions")
-    void testValidateRedNodeChildren_afterInsertions() {
-        for (int i = 1; i <= 15; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-            assertTrue(tree.validateRedNodeChildren(),
-                    "No double-red violations after inserting " + i + " nodes");
+            assertTreeValid(tree, "After insertion " + i);
+            assert23TreeValid(tree, "After insertion " + i);
         }
     }
 
     @Test
-    @DisplayName("ValidateRedNodeChildren no double-red violations")
-    void testValidateRedNodeChildren_noDoubleRed() {
-        // Insert many nodes in different orders to trigger various cases
-        int[] insertOrder = {50, 25, 75, 10, 30, 60, 80, 5, 15, 27, 35, 55, 65, 77, 85};
+    @DisplayName("Red links are always left-leaning")
+    void testValidate_leftLeaningProperty() {
+        // Insert pattern that might create right-leaning reds if not fixed
+        int[] ids = {5, 7, 3, 9, 1};
 
-        for (int i : insertOrder) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-            assertTrue(tree.validateRedNodeChildren(),
-                    "Should have no double-red violations");
-        }
-    }
-
-    // ==================== VALIDATE BLACK HEIGHT TESTS ====================
-
-    @Test
-    @DisplayName("ValidateBlackHeight passes for empty tree")
-    void testValidateBlackHeight_emptyTree() {
-        assertTrue(tree.validateBlackHeight(),
-                "Empty tree should pass black-height validation");
-    }
-
-    @Test
-    @DisplayName("ValidateBlackHeight passes after insertions")
-    void testValidateBlackHeight_afterInsertions() {
-        for (int i = 1; i <= 15; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-            assertTrue(tree.validateBlackHeight(),
-                    "All paths should have equal black-height after inserting " + i + " nodes");
-        }
-    }
-
-    @Test
-    @DisplayName("ValidateBlackHeight maintains balance")
-    void testValidateBlackHeight_maintainsBalance() {
-        // Insert in order that would unbalance regular BST
-        for (int i = 1; i <= 20; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-        }
-
-        assertTrue(tree.validateBlackHeight(),
-                "Black heights should remain equal even with sequential inserts");
-    }
-
-    // ==================== INSERTION CASE TESTS ====================
-
-    @Test
-    @DisplayName("Insertion Case 1 - Root becomes black")
-    void testInsertionCase1_rootBecomesBlack() {
-        // First insertion triggers Case 1
-        tree.insert(new Product("P005", "Product5", "Cat5", 50.0));
-
-        assertTrue(tree.validateRootAndLeaves(), "Root should be black (Case 1)");
-        assertTrue(tree.validate(), "Tree should be valid");
-    }
-
-    @Test
-    @DisplayName("Insertion Case 2 - Uncle is red (recoloring)")
-    void testInsertionCase2_uncleIsRed() {
-        // Build scenario for Case 2
-        tree.insert(new Product("P005", "Product5", "Cat5", 50.0)); // Black root
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0)); // Red left
-        tree.insert(new Product("P007", "Product7", "Cat7", 70.0)); // Red right
-
-        // This insert should trigger Case 2 (uncle is red)
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-
-        assertTrue(tree.validate(), "Tree should be valid after Case 2");
-        assertTrue(tree.validateRedNodeChildren(), "Should have no double-red");
-        assertTrue(tree.validateBlackHeight(), "Black heights should be equal");
-    }
-
-    @Test
-    @DisplayName("Insertion Case 3 - Uncle is black (triangle)")
-    void testInsertionCase3_triangleConfiguration() {
-        // Build scenario for Case 3
-        tree.insert(new Product("P005", "Product5", "Cat5", 50.0));
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-        tree.insert(new Product("P007", "Product7", "Cat7", 70.0));
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-
-        // This creates a triangle (left-right) that triggers Case 3
-        tree.insert(new Product("P002", "Product2", "Cat2", 20.0));
-
-        assertTrue(tree.validate(), "Tree should be valid after Case 3");
-        assertTrue(tree.validateRedNodeChildren(), "Should have no double-red");
-    }
-
-    @Test
-    @DisplayName("Insertion Case 4 - Uncle is black (line)")
-    void testInsertionCase4_lineConfiguration() {
-        // Build scenario for Case 4
-        tree.insert(new Product("P005", "Product5", "Cat5", 50.0));
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-        tree.insert(new Product("P007", "Product7", "Cat7", 70.0));
-
-        // These create line configurations that trigger Case 4
-        tree.insert(new Product("P008", "Product8", "Cat8", 80.0));
-        tree.insert(new Product("P009", "Product9", "Cat9", 90.0));
-
-        assertTrue(tree.validate(), "Tree should be valid after Case 4");
-        assertTrue(tree.validateRedNodeChildren(), "Should have no double-red");
-    }
-
-    @Test
-    @DisplayName("All insertion cases maintain validity")
-    void testAllInsertionCases_maintainValidity() {
-        // Insert sequence that triggers all cases
-        String[] insertOrder = {
-                "P050", "P025", "P075",  // Setup
-                "P010", "P030", "P060", "P080",  // Trigger various cases
-                "P005", "P015", "P027", "P035",  // More cases
-                "P055", "P065", "P077", "P085"   // Complete coverage
-        };
-
-        for (String id : insertOrder) {
+        for (int id : ids) {
             tree.insert(new Product(id, "Product", "Cat", 10.0));
-            assertTrue(tree.validate(), "Tree should remain valid after inserting " + id);
-        }
-    }
-
-    // ==================== ROTATION TESTS (indirect via insertion) ====================
-
-    @Test
-    @DisplayName("Rotations maintain tree validity")
-    void testRotations_maintainValidity() {
-        // Sequential inserts force rotations
-        for (int i = 1; i <= 7; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-        }
-
-        assertTrue(tree.validate(), "Tree should be valid after rotations");
-
-        // Verify all nodes are still searchable
-        for (int i = 1; i <= 7; i++) {
-            String id = String.format("P%03d", i);
-            assertNotNull(tree.search(id), "Should find product " + id + " after rotations");
+            assertTreeValid(tree, "Left-leaning check after inserting " + id);
         }
     }
 
     @Test
-    @DisplayName("Left rotation scenario")
-    void testLeftRotation_scenario() {
-        // This sequence should trigger left rotations
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        tree.insert(new Product("P002", "Product2", "Cat2", 20.0));
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-
-        assertTrue(tree.validate(), "Tree should be valid after left rotations");
-        assertEquals(3, tree.size(), "Size should be 3");
-    }
-
-    @Test
-    @DisplayName("Right rotation scenario")
-    void testRightRotation_scenario() {
-        // This sequence should trigger right rotations
-        tree.insert(new Product("P003", "Product3", "Cat3", 30.0));
-        tree.insert(new Product("P002", "Product2", "Cat2", 20.0));
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-
-        assertTrue(tree.validate(), "Tree should be valid after right rotations");
-        assertEquals(3, tree.size(), "Size should be 3");
-    }
-
-    @Test
-    @DisplayName("Mixed rotations maintain searchability")
-    void testMixedRotations_maintainSearchability() {
-        int[] insertOrder = {5, 2, 8, 1, 3, 7, 9, 4, 6};
-
-        for (int i : insertOrder) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-        }
-
-        // All nodes should still be searchable after various rotations
-        for (int i : insertOrder) {
-            String id = String.format("P%03d", i);
-            Product found = tree.search(id);
-            assertNotNull(found, "Should find product " + id + " after rotations");
-            assertEquals(id, found.getId(), "Should find correct product");
-        }
-    }
-
-    // ==================== COMPREHENSIVE INTEGRATION TESTS ====================
-
-    @Test
-    @DisplayName("Integration test - Sequential operations")
-    void integrationTest_sequentialOperations() {
-        // Insert
+    @DisplayName("Root is always black after insertions")
+    void testValidate_rootAlwaysBlack() {
         for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
+
+            // The validate() method checks this, but we emphasize it
+            assertTreeValid(tree, "Root black check after insertion " + i);
         }
-
-        // Verify size and validity
-        assertEquals(10, tree.size(), "Should have 10 products");
-        assertTrue(tree.validate(), "Tree should be valid");
-
-        // Search all
-        for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            assertNotNull(tree.search(id), "Should find product " + id);
-        }
-
-        // Update some
-        tree.insert(new Product("P005", "UpdatedProduct5", "NewCat", 55.0));
-        Product updated = tree.search("P005");
-        assertEquals("UpdatedProduct5", updated.getName(), "Should have updated name");
-
-        // Size should not change
-        assertEquals(10, tree.size(), "Size should still be 10");
-        assertTrue(tree.validate(), "Tree should still be valid");
     }
 
-    @Test
-    @DisplayName("Integration test - Random operations")
-    void integrationTest_randomOperations() {
-        String[] insertOrder = {"P050", "P025", "P075", "P010", "P030", "P060", "P080",
-                "P005", "P015", "P027", "P035", "P055", "P065", "P077", "P085"};
-
-        // Insert in random order
-        for (String id : insertOrder) {
-            tree.insert(new Product(id, "Product" + id, "Cat", 10.0));
-            assertTrue(tree.validate(), "Tree should be valid after each insert");
-        }
-
-        // Search in different order
-        String[] searchOrder = {"P005", "P080", "P027", "P065", "P050", "P010"};
-        for (String id : searchOrder) {
-            assertNotNull(tree.search(id), "Should find product " + id);
-        }
-
-        // Search non-existent
-        assertNull(tree.search("P000"), "Should not find P000");
-        assertNull(tree.search("P100"), "Should not find P100");
-        assertNull(tree.search("P045"), "Should not find P045");
-
-        // Final validation
-        assertEquals(15, tree.size(), "Should have 15 products");
-        assertTrue(tree.validate(), "Tree should be valid at end");
-    }
+    // ==================== INTEGRATION TESTS ====================
 
     @Test
-    @DisplayName("Integration test - Large scale")
-    void integrationTest_largeScale() {
-        int numProducts = 500;
+    @DisplayName("Integration test - Large tree with validation")
+    void integrationTest_largeTree() {
+        int numProducts = 100;
 
-        // Insert many products
+        // Insert products
         for (int i = 1; i <= numProducts; i++) {
-            String id = String.format("P%05d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
         }
 
-        // Verify size
-        assertEquals(numProducts, tree.size(), "Should have " + numProducts + " products");
+        // Validate size
+        assertSizeEquals(numProducts, tree, "After inserting " + numProducts + " products");
 
-        // Spot check searches
-        for (int i = 1; i <= numProducts; i += 50) {
-            String id = String.format("P%05d", i);
-            assertNotNull(tree.search(id), "Should find product " + id);
+        // Search all products
+        for (int i = 1; i <= numProducts; i++) {
+            assertProductFound(i, tree, "Product " + i);
         }
 
-        // Validate tree properties
-        assertTrue(tree.validate(), "Large tree should be valid");
-        assertTrue(tree.validateRootAndLeaves(), "Root should be black");
-        assertTrue(tree.validateRedNodeChildren(), "Should have no double-red");
-        assertTrue(tree.validateBlackHeight(), "Black heights should be equal");
+        // Validate LLRB properties
+        assertTreeValid(tree, "Large tree with " + numProducts + " nodes");
+        assert23TreeValid(tree, "Large tree with " + numProducts + " nodes");
 
         // Verify height is logarithmic
         int height = tree.height();
-        int maxHeight = (int) (2 * Math.log(numProducts + 1) / Math.log(2)) + 1;
-        assertTrue(height <= maxHeight,
-                String.format("Height %d should be <= %d for %d nodes", height, maxHeight, numProducts));
+        int maxHeight = (int) (2 * Math.log(numProducts + 1) / Math.log(2)) + 2;
+        assertHeightInBounds(tree, maxHeight, numProducts + " node tree");
+
+        // Check red links are sparse
+        int redLinks = tree.countRedLinks();
+        int maxRedLinks = numProducts / 2;
+        if (redLinks >= maxRedLinks) {
+            System.setOut(originalOut);
+            System.err.println("\n❌ TOO MANY RED LINKS:");
+            System.err.println("  Red links: " + redLinks);
+            System.err.println("  Max expected: < " + maxRedLinks);
+            System.err.println("  Total nodes: " + numProducts);
+            System.err.println("\n💡 HINT: Excessive red links suggest:");
+            System.err.println("  → Color flips may not be working");
+            System.err.println("  → Tree is not maintaining 2-3-4 tree property");
+        }
+        assertTrue(redLinks < maxRedLinks,
+                String.format("Red links (%d) should be < %d", redLinks, maxRedLinks));
     }
 
     @Test
-    @DisplayName("Integration test - All validation functions pass together")
-    void integrationTest_allValidationsPass() {
-        for (int i = 1; i <= 25; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
+    @DisplayName("Integration test - All LLRB properties maintained")
+    void integrationTest_allPropertiesMaintained() {
+        for (int i = 1; i <= 50; i++) {
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
 
-            // All validations should pass after each insert
-            assertTrue(tree.validateRootAndLeaves(),
-                    "Root/leaves validation should pass at size " + i);
-            assertTrue(tree.validateNodeColors(),
-                    "Color validation should pass at size " + i);
-            assertTrue(tree.validateRedNodeChildren(),
-                    "Red-node validation should pass at size " + i);
-            assertTrue(tree.validateBlackHeight(),
-                    "Black-height validation should pass at size " + i);
-            assertTrue(tree.validate(),
-                    "Comprehensive validation should pass at size " + i);
+            // Comprehensive validation after each insert
+            assertTreeValid(tree, "Comprehensive check at size " + i);
+            assert23TreeValid(tree, "2-3 tree check at size " + i);
+            assertSizeEquals(i, tree, "Size check at insertion " + i);
+
+            // Height should be logarithmic
+            int height = tree.height();
+            int maxHeight = (int) (2 * Math.log(i + 1) / Math.log(2)) + 2;
+            assertHeightInBounds(tree, maxHeight, "Height check at size " + i);
         }
     }
 
     // ==================== EDGE CASE TESTS ====================
 
     @Test
-    @DisplayName("Edge case - Single node tree")
+    @DisplayName("Edge case - Single node tree is valid LLRB")
     void edgeCase_singleNode() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
 
-        assertEquals(1, tree.size(), "Size should be 1");
-        assertEquals(1, tree.height(), "Height should be 1");
-        assertNotNull(tree.search("P001"), "Should find the single node");
-        assertTrue(tree.validate(), "Single node tree should be valid");
+        assertSizeEquals(1, tree, "Single node");
+
+        int height = tree.height();
+        if (height != 1) {
+            System.setOut(originalOut);
+            System.err.println("❌ Single node height - Expected: 1, Actual: " + height);
+        }
+        assertEquals(1, height, "Single node height");
+
+        assertProductFound(1, tree, "Single node");
+        assertTreeValid(tree, "Single node tree");
+        assert23TreeValid(tree, "Single node tree");
     }
 
     @Test
-    @DisplayName("Edge case - Two node tree")
+    @DisplayName("Edge case - Two node tree is valid LLRB")
     void edgeCase_twoNodes() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        tree.insert(new Product("P002", "Product2", "Cat2", 20.0));
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
+        tree.insert(new Product(2, "Product2", "Cat2", 20.0));
 
-        assertEquals(2, tree.size(), "Size should be 2");
-        assertNotNull(tree.search("P001"), "Should find first node");
-        assertNotNull(tree.search("P002"), "Should find second node");
-        assertTrue(tree.validate(), "Two node tree should be valid");
+        assertSizeEquals(2, tree, "Two nodes");
+        assertProductFound(1, tree, "First of two nodes");
+        assertProductFound(2, tree, "Second of two nodes");
+        assertTreeValid(tree, "Two node tree");
+        assert23TreeValid(tree, "Two node tree");
     }
 
     @Test
     @DisplayName("Edge case - All same category")
     void edgeCase_sameCategory() {
         for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "SameCategory", 10.0 * i));
+            tree.insert(new Product(i, "Product" + i, "SameCategory", 10.0 * i));
         }
 
-        assertEquals(10, tree.size(), "Size should be 10");
-        assertTrue(tree.validate(), "Tree should be valid");
+        assertSizeEquals(10, tree, "Same category products");
+        assertTreeValid(tree, "Same category tree");
+        assert23TreeValid(tree, "Same category tree");
     }
 
     @Test
     @DisplayName("Edge case - Identical prices")
     void edgeCase_identicalPrices() {
         for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat" + i, 99.99));
+            tree.insert(new Product(i, "Product" + i, "Cat" + i, 99.99));
         }
 
-        assertEquals(10, tree.size(), "Size should be 10");
-        assertTrue(tree.validate(), "Tree should be valid");
+        assertSizeEquals(10, tree, "Identical prices");
+        assertTreeValid(tree, "Identical prices tree");
 
         // Verify all have same price
         for (int i = 1; i <= 10; i++) {
-            String id = String.format("P%03d", i);
-            Product found = tree.search(id);
-            assertEquals(99.99, found.getPrice(), 0.01, "All should have same price");
+            Product found = tree.search(i);
+            assertNotNull(found, "Should find product " + i);
+
+            double price = found.getPrice();
+            if (Math.abs(price - 99.99) > 0.01) {
+                System.setOut(originalOut);
+                System.err.println("❌ Price mismatch for " + i);
+                System.err.println("  Expected: 99.99");
+                System.err.println("  Actual: " + price);
+            }
+            assertEquals(99.99, price, 0.01, "Price for " + i);
         }
     }
 
     @Test
     @DisplayName("Edge case - Very similar IDs")
     void edgeCase_similarIds() {
-        tree.insert(new Product("P001", "Product1", "Cat1", 10.0));
-        tree.insert(new Product("P011", "Product11", "Cat11", 110.0));
-        tree.insert(new Product("P101", "Product101", "Cat101", 1010.0));
+        tree.insert(new Product(1, "Product1", "Cat1", 10.0));
+        tree.insert(new Product(11, "Product11", "Cat11", 110.0));
+        tree.insert(new Product(101, "Product101", "Cat101", 1010.0));
 
-        assertEquals(3, tree.size(), "Size should be 3");
-        assertNotNull(tree.search("P001"), "Should find P001");
-        assertNotNull(tree.search("P011"), "Should find P011");
-        assertNotNull(tree.search("P101"), "Should find P101");
-        assertTrue(tree.validate(), "Tree should be valid");
+        assertSizeEquals(3, tree, "Similar IDs");
+        assertProductFound(1, tree, "ID 1");
+        assertProductFound(11, tree, "ID 11");
+        assertProductFound(101, tree, "ID 101");
+        assertTreeValid(tree, "Similar IDs tree");
+    }
+
+    @Test
+    @DisplayName("Edge case - E-commerce realistic product IDs")
+    void edgeCase_realisticProductIds() {
+        tree.insert(new Product(1001, "Wireless Mouse", "Electronics|Accessories", 29.99));
+        tree.insert(new Product(1002, "Apple iPhone 14, 128GB", "Smartphones|Electronics", 999.99));
+        tree.insert(new Product(1003, "Gaming Keyboard", "Electronics|Gaming", 79.99));
+        tree.insert(new Product(1004, "USB-C Cable", "Accessories|Electronics", 12.99));
+        tree.insert(new Product(1005, "Laptop Stand", "Office|Accessories", 34.99));
+
+        assertSizeEquals(5, tree, "Realistic e-commerce products");
+
+        assertProductFound(1001, tree, "Wireless mouse");
+        assertProductFound(1002, tree, "iPhone");
+        assertProductFound(1003, tree, "Gaming keyboard");
+        assertProductFound(1004, tree, "USB cable");
+        assertProductFound(1005, tree, "Laptop stand");
+
+        assertTreeValid(tree, "Realistic products tree");
+        assert23TreeValid(tree, "Realistic products tree");
     }
 
     // ==================== STRESS TESTS ====================
 
     @Test
-    @DisplayName("Stress test - 1000 sequential inserts")
+    @DisplayName("Stress test - 1000 sequential inserts maintain LLRB")
     void stressTest_1000SequentialInserts() {
+        System.setOut(originalOut);
+        System.out.println("Running stress test with 1000 sequential inserts...");
+
         for (int i = 1; i <= 1000; i++) {
-            String id = String.format("P%06d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-        }
+            tree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
 
-        assertEquals(1000, tree.size(), "Size should be 1000");
-        assertTrue(tree.validate(), "Tree should be valid after 1000 inserts");
-
-        // Spot check
-        assertNotNull(tree.search("P000001"), "Should find first product");
-        assertNotNull(tree.search("P000500"), "Should find middle product");
-        assertNotNull(tree.search("P001000"), "Should find last product");
-    }
-
-    @Test
-    @DisplayName("Stress test - Many updates")
-    void stressTest_manyUpdates() {
-        // Insert 100 products
-        for (int i = 1; i <= 100; i++) {
-            String id = String.format("P%03d", i);
-            tree.insert(new Product(id, "Product" + i, "Cat", 10.0 * i));
-        }
-
-        // Update each product 5 times
-        for (int j = 1; j <= 5; j++) {
-            for (int i = 1; i <= 100; i++) {
-                String id = String.format("P%03d", i);
-                tree.insert(new Product(id, "Updated" + j, "Cat", 10.0 * i * j));
+            // Only validate periodically to save time
+            if (i % 100 == 0) {
+                System.out.println("  Inserted " + i + " products, validating...");
+                assertTreeValid(tree, "After " + i + " sequential inserts");
             }
         }
 
-        assertEquals(100, tree.size(), "Size should still be 100");
-        assertTrue(tree.validate(), "Tree should be valid after many updates");
+        assertSizeEquals(1000, tree, "1000 sequential inserts");
+        assertTreeValid(tree, "Final tree with 1000 nodes");
+        assert23TreeValid(tree, "Final tree with 1000 nodes");
 
-        // Verify final state
-        Product p = tree.search("P050");
-        assertEquals("Updated5", p.getName(), "Should have final update");
+        // Spot check searches
+        assertProductFound(1, tree, "First product");
+        assertProductFound(500, tree, "Middle product");
+        assertProductFound(1000, tree, "Last product");
+
+        // Verify logarithmic height
+        int height = tree.height();
+        int maxHeight = (int) (2 * Math.log(1001) / Math.log(2)) + 2;
+        assertHeightInBounds(tree, maxHeight, "1000 node tree");
+
+        System.out.println("✓ Stress test completed successfully!");
+    }
+
+    @Test
+    @DisplayName("Stress test - Validates correctness of LLRB at various sizes")
+    void stressTest_validationAtVariousSizes() {
+        System.setOut(originalOut);
+        System.out.println("Running validation at various tree sizes...");
+
+        int[] testSizes = {10, 25, 50, 100, 250, 500};
+
+        for (int size : testSizes) {
+            System.out.println("  Testing size " + size + "...");
+            RedBlackTree testTree = new RedBlackTree();
+
+            // Insert size products
+            for (int i = 1; i <= size; i++) {
+                testTree.insert(new Product(i, "Product" + i, "Cat", 10.0 * i));
+            }
+
+            // Validate
+            assertTreeValid(testTree, "Tree at size " + size);
+            assert23TreeValid(testTree, "Tree at size " + size);
+            assertSizeEquals(size, testTree, "Tree at size " + size);
+
+            // Check height bound
+            int height = testTree.height();
+            int maxHeight = (int) (2 * Math.log(size + 1) / Math.log(2)) + 2;
+            assertHeightInBounds(testTree, maxHeight, size + " node tree");
+        }
+
+        System.out.println("✓ All size validations passed!");
     }
 }

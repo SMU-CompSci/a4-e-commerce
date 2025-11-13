@@ -2,17 +2,17 @@ package com.student_work;
 
 
 public class Product implements Comparable<Product> {
-    private final String id;
+    private final int id;
     private final String name;
     private final String category;  // Multiple categories separated by |
     private final double price;
 
-    public Product(String id, String name, String category, double price) {
+    public Product(int id, String name, String category, double price) {
         // TODO: Initialize all final fields with the provided parameters
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
-    public String getId() {
+    public int getId() {
         // TODO: Return the product ID
         throw new UnsupportedOperationException("Not implemented yet.");
     }

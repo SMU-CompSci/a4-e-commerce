@@ -9,9 +9,9 @@ public class RedBlackTree {
     private int size;
 
     private static class Node {
-        String productId;
+        int productId;
         Product product;
-        Node left, right, parent;
+        Node left, right;
         boolean color;
 
         Node(Product product, boolean color) {
@@ -27,26 +27,6 @@ public class RedBlackTree {
     }
 
 
-    // ==================== FAMILY RELATIONSHIP FUNCTIONS ====================
-
-    private Node getParent(Node node) {
-        // TODO: Return the parent of the given node
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private Node getGrandparent(Node node) {
-        // TODO: Return the grandparent of the given node
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private Node getUncle(Node node) {
-        // TODO: Return the uncle (parent's sibling) of the given node
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
     // ==================== VALIDATION FUNCTIONS ====================
 
     private boolean isRed(Node node) {
@@ -57,74 +37,6 @@ public class RedBlackTree {
 
     private boolean isBlack(Node node) {
         // TODO: Check if a node is black
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    public boolean validateRootAndLeaves() {
-        // TODO: Validate that the root is black
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    public boolean validateNodeColors() {
-        // TODO: Validate that all nodes have valid colors (RED or BLACK)
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    public boolean validateRedNodeChildren() {
-        // TODO: Validate that red nodes have only black children
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    public boolean validateBlackHeight() {
-        // TODO: Validate that all paths have equal black heights
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    public boolean validate() {
-        // TODO: Run all validation checks
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-    // ==================== INSERTION ====================
-
-
-    public void insert(Product product) {
-        // TODO: Insert a product into the Red-Black tree
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private void insertCase1(Node node) {
-        // TODO: Handle Case 1 - node is root
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private void insertCase2(Node node) {
-        // TODO: Handle Case 2 - uncle is red
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private void insertCase3(Node node) {
-        // TODO: Handle Case 3 - uncle is black and triangle configuration
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private void insertCase4(Node node) {
-        // TODO: Handle Case 4 - uncle is black and line configuration
-        throw new UnsupportedOperationException("Not implemented yet.");
-    }
-
-
-    private void insertFixup(Node node) {
-        // TODO: Determine and apply the appropriate insertion fixup case
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
@@ -147,13 +59,63 @@ public class RedBlackTree {
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 
+    // ==================== INSERTION ====================
+
+    public void insert(Product product) {
+        // TODO: Insert a product into the Red-Black tree
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private Node insert(Node h, Product product) {
+        // TODO: Implement recursive insertion with LLRB fix-up
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
     // ==================== SEARCH ====================
 
 
-    public Product search(String productId) {
+    public Product search(int productId) {
         // TODO: Search for a product by ID using binary search
         throw new UnsupportedOperationException("Not implemented yet.");
     }
+
+    private Product search(Node h, int productId) {
+        // TODO: Implement recursive search (optional)
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    // ==================== VALIDATION ====================
+
+    public boolean validate() {
+        // TODO: Implement comprehensive validation
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private boolean validateNoRightRed(Node h) {
+        // TODO: Recursively check that no node has a red right child and black left child
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private boolean validateNoConsecutiveReds(Node h) {
+        // TODO: Recursively check no red node has red children
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private int validateBlackHeight(Node h) {
+        // TODO: Recursively compute and verify black height
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    public boolean is23() {
+        // TODO: Check 2-3 tree properties
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private boolean is23(Node h) {
+        // TODO: Recursively validate 2-3 tree property
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
 
     // ==================== UTILITY FUNCTIONS ====================
 
@@ -174,6 +136,26 @@ public class RedBlackTree {
 
     private int height(Node node) {
         // TODO: Calculate the height of the tree
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    public int countRedLinks() {
+        // TODO: Count red nodes (each red node represents a red link from its parent)
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private int countRedLinks(Node h) {
+        // TODO: Count red nodes recursively
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    public void printTree() {
+        //TODO: Print tree structure with colors
+        throw new UnsupportedOperationException("Not implemented yet.");
+    }
+
+    private void printTreeHelper(Node node, String prefix, boolean isTail) {
+        //TODO: recursive helper to printing the tree
         throw new UnsupportedOperationException("Not implemented yet.");
     }
 }

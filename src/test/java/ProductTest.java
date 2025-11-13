@@ -9,22 +9,22 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProductTest {
 
     // Test data constants matching README examples
-    private static final String PRODUCT_ID_1 = "1001";
+    private static final int PRODUCT_ID_1 = 1001;
     private static final String PRODUCT_NAME_1 = "Wireless Mouse";
     private static final String CATEGORY_1 = "Electronics|Accessories";
     private static final double PRICE_1 = 29.99;
 
-    private static final String PRODUCT_ID_2 = "1002";
+    private static final int PRODUCT_ID_2 = 1002;
     private static final String PRODUCT_NAME_2 = "Apple iPhone 14, 128GB";
     private static final String CATEGORY_2 = "Smartphones|Electronics";
     private static final double PRICE_2 = 999.99;
 
-    private static final String PRODUCT_ID_3 = "1003";
+    private static final int PRODUCT_ID_3 = 1003;
     private static final String PRODUCT_NAME_3 = "Book: \"The Art of War\"";
     private static final String CATEGORY_3 = "Books|Classics";
     private static final double PRICE_3 = 14.99;
 
-    private static final String PRODUCT_ID_5 = "1005";
+    private static final int PRODUCT_ID_5 = 1005;
     private static final String PRODUCT_NAME_5 = "Sony 65\" OLED TV, Smart";
     private static final String CATEGORY_5 = "Electronics|Home Entertainment|TVs";
     private static final double PRICE_5 = 1899.99;
@@ -96,9 +96,9 @@ class ProductTest {
      */
     @Test
     void allGetters_simpleProduct() {
-        Product product = new Product("TEST123", "Test Product", "Category", 10.00);
+        Product product = new Product(123, "Test Product", "Category", 10.00);
 
-        assertEquals("TEST123", product.getId(), "getId() should return product ID");
+        assertEquals(123, product.getId(), "getId() should return product ID");
         assertEquals("Test Product", product.getName(), "getName() should return product name");
         assertEquals("Category", product.getCategory(), "getCategory() should return category");
         assertEquals(10.00, product.getPrice(), 0.001, "getPrice() should return price");
@@ -109,7 +109,7 @@ class ProductTest {
      */
     @Test
     void getCategory_singleCategory() {
-        Product product = new Product("2001", "Simple Product", "Electronics", 49.99);
+        Product product = new Product(2001, "Simple Product", "Electronics", 49.99);
 
         assertEquals("Electronics", product.getCategory(), "Single category should be stored without pipes");
         assertFalse(product.getCategory().contains("|"), "Single category should not contain pipe character");
@@ -120,7 +120,7 @@ class ProductTest {
      */
     @Test
     void getCategory_multipleCategoriesWithPipes() {
-        Product product = new Product("3001", "Gaming Keyboard", "Electronics|Gaming|Accessories", 79.99);
+        Product product = new Product(3001, "Gaming Keyboard", "Electronics|Gaming|Accessories", 79.99);
 
         assertEquals("Electronics|Gaming|Accessories", product.getCategory(),
                 "Multiple categories should be stored with pipe separators");
@@ -132,7 +132,7 @@ class ProductTest {
      */
     @Test
     void getPrice_zeroPrice() {
-        Product product = new Product("4001", "Free Item", "Category", 0.00);
+        Product product = new Product(4001, "Free Item", "Category", 0.00);
 
         assertEquals(0.00, product.getPrice(), 0.001, "Zero price should be allowed");
     }
@@ -142,7 +142,7 @@ class ProductTest {
      */
     @Test
     void getPrice_largePrice() {
-        Product product = new Product("5001", "Expensive Item", "Category", 99999.99);
+        Product product = new Product(5001, "Expensive Item", "Category", 99999.99);
 
         assertEquals(99999.99, product.getPrice(), 0.001, "Large prices should be supported");
     }
@@ -171,8 +171,8 @@ class ProductTest {
      */
     @Test
     void toString_priceFormatting_twoDecimalPlaces() {
-        Product product1 = new Product("1001", "Product", "Category", 10.5);
-        Product product2 = new Product("1002", "Product", "Category", 10.00);
+        Product product1 = new Product(1001, "Product", "Category", 10.5);
+        Product product2 = new Product(1002, "Product", "Category", 10.00);
 
         assertTrue(product1.toString().contains("$10.50"),
                 "Price 10.5 should be formatted as $10.50 with two decimal places");
@@ -209,8 +209,8 @@ class ProductTest {
      */
     @Test
     void equals_sameProductId_differentOtherFields() {
-        Product product1 = new Product("1001", "Product A", "Category1", 10.00);
-        Product product2 = new Product("1001", "Product B", "Category2", 20.00);
+        Product product1 = new Product(1001, "Product A", "Category1", 10.00);
+        Product product2 = new Product(1001, "Product B", "Category2", 20.00);
 
         assertEquals(product1, product2,
                 "Products with same ID should be equal (even if other fields differ)");
@@ -222,8 +222,8 @@ class ProductTest {
      */
     @Test
     void equals_differentProductIds() {
-        Product product1 = new Product("1001", "Product", "Category", 10.00);
-        Product product2 = new Product("1002", "Product", "Category", 10.00);
+        Product product1 = new Product(1001, "Product", "Category", 10.00);
+        Product product2 = new Product(1002, "Product", "Category", 10.00);
 
         assertNotEquals(product1, product2,
                 "Products with different IDs should NOT be equal");
@@ -258,22 +258,11 @@ class ProductTest {
      */
     @Test
     void equals_emptyStringFields() {
-        Product product1 = new Product("", "", "", 0.00);
-        Product product2 = new Product("", "", "", 0.00);
+        Product product1 = new Product(-1, "", "", 0.00);
+        Product product2 = new Product(-1, "", "", 0.00);
 
         assertEquals(product1, product2,
                 "Products with same empty ID should be equal");
-    }
-
-    /**
-     * Test product with alphanumeric ID.
-     */
-    @Test
-    void constructor_alphanumericProductId() {
-        Product product = new Product("ABC-123-XYZ", "Product", "Category", 50.00);
-
-        assertEquals("ABC-123-XYZ", product.getId(),
-                "Alphanumeric product IDs should be supported");
     }
 
     /**
@@ -282,7 +271,7 @@ class ProductTest {
     @Test
     void constructor_longProductName() {
         String longName = "This is a very long product name that contains many words and characters to test the system's ability to handle lengthy product descriptions";
-        Product product = new Product("1001", longName, "Category", 10.00);
+        Product product = new Product(1001, longName, "Category", 10.00);
 
         assertEquals(longName, product.getName(),
                 "Long product names should be stored completely");
@@ -294,7 +283,7 @@ class ProductTest {
     @Test
     void constructor_manyCategoriesTenCategories() {
         String categories = "Cat1|Cat2|Cat3|Cat4|Cat5|Cat6|Cat7|Cat8|Cat9|Cat10";
-        Product product = new Product("1001", "Product", categories, 10.00);
+        Product product = new Product(1001, "Product", categories, 10.00);
 
         assertEquals(categories, product.getCategory(),
                 "Should support up to 10 categories as per requirements");

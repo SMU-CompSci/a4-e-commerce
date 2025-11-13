@@ -195,25 +195,32 @@ Your parser should correctly handle all three cases.
 
 ---
 
-# Part 2 — Red-Black Tree Implementation (50 pts)
+# Part 2 — Left-Leaning Red-Black Tree Implementation (50 pts)
 
 ### Introduction
 
-Implement a **Red-Black tree** to store product records, indexed by `product-id`. The tree must support efficient insertion and search operations while maintaining balance.
+Implement a **Left-Leaning Red-Black (LLRB) tree** to store product records, indexed by `product-id`. This elegant variant of Red-Black trees, developed by Robert Sedgewick at Princeton, maintains 2-3 tree semantics while providing the same O(log n) guarantees as standard Red-Black trees with significantly simpler code.
 
-Red-Black trees guarantee `O(log n)` worst-case time for both operations through color-based balancing rules.
+**Reference:** Princeton's Algorithms 4th Edition - https://algs4.cs.princeton.edu/33balanced/index.php#3.4
+
+LLRB trees guarantee `O(log n)` worst-case time for insertion and search operations through a simplified balancing approach that enforces three key invariants.
 
 ---
 
-### Red-Black Tree Properties
+### Left-Leaning Red-Black Tree Invariants
 
-Your implementation must maintain these five properties:
+Your implementation must maintain these LLRB invariants (which correspond to 2-3 tree properties):
 
-1. Every node is either **red** or **black**
-2. The **root** is always **black**
-3. All **leaves** (NIL nodes) are **black**
-4. If a node is **red**, both its children must be **black** (no two consecutive red nodes)
-5. Every path from root to leaf contains the **same number of black nodes** (black-height)
+1. **No right-leaning red links** — Red links always lean to the left
+2. **No node has two red children** — No consecutive red links on any path
+3. **Perfect black balance** — Every path from root to leaf contains the same number of black links
+4. **Root is always black** — Enforced after every insertion
+
+**Why LLRB over standard RB trees?**
+- Simpler implementation (about half the code)
+- Maintains perfect 1-1 correspondence with 2-3 trees
+- Uses only three simple operations applied in a fixed order
+- No need to track parent pointers or handle multiple cases
 
 ---
 
@@ -223,30 +230,42 @@ Your implementation must maintain these five properties:
 
 ```java
 public class RedBlackTree {
+    private static final boolean RED = true;
+    private static final boolean BLACK = false;
+    
     private Node root;
+    private int size;
     
     // Inner class for tree nodes
     private static class Node {
         String productId;      // Key for comparison
         Product product;       // Full product data
-        Node left, right, parent;
-        boolean isRed;         // Color: true = red, false = black
+        Node left, right;      // No parent pointer needed!
+        boolean color;         // Color: RED = true, BLACK = false
         
-        Node(Product product) {
+        Node(Product product, boolean color) {
             this.productId = product.getId();
             this.product = product;
-            this.isRed = true;  // New nodes are always red
+            this.color = color;
+            this.left = null;
+            this.right = null;
         }
     }
     
     // Required methods
+	public RedBlackTree()
     public void insert(Product product) { }
     public Product search(String productId) { }
-    
-    // Helper methods (private)
-    private void insertFixup(Node node) { }
-    private void rotateLeft(Node node) { }
-    private void rotateRight(Node node) { }
+    public boolean validate() {}
+    public boolean is23() {}
+
+    // Helpper functions
+    public int size() {}
+    public boolean isEmpty() {}
+    public int height() {}
+    public int countRedLinks() {}
+    public void printTree() {}
+
 }
 ```
 
@@ -261,14 +280,31 @@ public class RedBlackTree {
 public void insert(Product product)
 ```
 
-**Algorithm:**
-1. Perform standard BST insertion using `product-id` as key
-2. Color new node **red**
-3. Call `insertFixup()` to restore Red-Black properties
-4. Handle three cases:
-    - **Case 1:** Uncle is red → recolor
-    - **Case 2:** Uncle is black, node is "inner child" → rotate to Case 3
-    - **Case 3:** Uncle is black, node is "outer child" → rotate + recolor
+**LLRB Algorithm (beautifully simple!):**
+1. Perform standard BST insertion using `product-id` as key — insert new nodes as **RED**
+2. After each recursive call returning from insertion, apply these three operations **in order**:
+
+   a. **Rotate left** if right child is red and left child is black
+      ```java
+      if (isRed(h.right) && !isRed(h.left)) 
+          h = rotateLeft(h);
+      ```
+
+   b. **Rotate right** if left child and left-left grandchild are both red
+      ```java
+      if (isRed(h.left) && isRed(h.left.left)) 
+          h = rotateRight(h);
+      ```
+
+   c. **Flip colors** if both children are red (split a 4-node)
+      ```java
+      if (isRed(h.left) && isRed(h.right)) 
+          flipColors(h);
+      ```
+
+3. Set root to black after insertion completes
+
+**Key insight:** These three simple operations, applied in this exact order on the way up the recursion, automatically maintain all LLRB invariants. No complex case analysis needed!
 
 **Time complexity:** `O(log n)`
 
@@ -287,54 +323,50 @@ public Product search(String productId)
 3. Go left if smaller, right if larger
 4. Return product when found, or `null` if not found
 
+**Note:** Search is identical to standard BST search — colors don't affect search logic.
+
 **Time complexity:** `O(log n)`
 
 ---
 
-### Balancing Operations
+### LLRB Balancing Operations
 
 #### Left Rotation
+Make a right-leaning red link lean left:
 ```
-    x                y
-   / \              / \
-  a   y     =>     x   c
-     / \          / \
-    b   c        a   b
+    h (E)                x (S)
+   / \                  / \
+  a   x (S)     =>   h (E) c
+     / \            / \
+    b   c          a   b
 ```
+- **Purpose:** Eliminate right-leaning red links
+- **Implementation:** Node `x` becomes new root, inherits `h`'s color; `h` becomes red
 
 #### Right Rotation
+Balance two left-leaning red links:
 ```
-      y            x
-     / \          / \
-    x   c   =>   a   y
-   / \              / \
-  a   b            b   c
+      h (S)            x (E)
+     / \              / \
+  x (E) c      =>    a   h (S)
+   / \                  / \
+  a   b                b   c
 ```
+- **Purpose:** Fix consecutive left-leaning red links
+- **Implementation:** Node `x` becomes new root, inherits `h`'s color; `h` becomes red
 
-Implement both `rotateLeft()` and `rotateRight()` as helper methods.
-
----
-
-### Sample Usage
-
-```java
-RedBlackTree tree = new RedBlackTree();
-
-// Insert products from parsed CSV
-for (Product p : products) {
-    tree.insert(p);
-}
-
-// Search for specific products
-Product result1 = tree.search("1002");
-Product result2 = tree.search("1005");
-Product result3 = tree.search("9999");  // Not found
-
-// Display results
-if (result1 != null) {
-    System.out.println(result1);
-}
+#### Color Flip
+Split a 4-node (both children red):
 ```
+      h (B)                h (R)
+     / \                  / \
+  l (R) r (R)    =>    l (B) r (B)
+```
+- **Purpose:** Push red link up the tree to maintain 2-3 tree semantics
+- **Implementation:** Flip colors of node and both children
+
+**Critical:** These operations preserve perfect black balance!
+
 
 ---
 
@@ -361,8 +393,7 @@ Product ID: 9999 not found.
 * Implement all rotations and color adjustments yourself
 * Do **not** use Java's built-in `TreeMap` or `TreeSet`
 * Handle duplicate IDs by updating the existing product (or rejecting the insertion)
-* Tree must pass Red-Black property checks (optional: implement a validation method)
-
+* Tree must pass LLRB invariant checks (optional: implement a validation method)
 
 ---
 

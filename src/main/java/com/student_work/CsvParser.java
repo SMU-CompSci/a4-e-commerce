@@ -25,7 +25,7 @@ public class CsvParser {
     }
 
 
-    public static String parseProductId(String field) {
+    public static int parseProductId(String field) {
         // TODO: Parse and clean the product ID field
         throw new UnsupportedOperationException("Not implemented yet.");
     }
